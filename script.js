@@ -1,58 +1,20 @@
-const header = document.querySelector('[data-header]');
-const nav = document.querySelector('[data-nav]');
-const navToggle = document.querySelector('[data-nav-toggle]');
-
-const setHeaderState = () => {
-  header?.classList.toggle('scrolled', window.scrollY > 24);
-};
-
-const closeNav = () => {
-  nav?.classList.remove('open');
-  navToggle?.setAttribute('aria-expanded', 'false');
-  document.body.classList.remove('nav-open');
-};
-
-navToggle?.addEventListener('click', () => {
-  const open = navToggle.getAttribute('aria-expanded') === 'true';
-  navToggle.setAttribute('aria-expanded', String(!open));
-  nav?.classList.toggle('open', !open);
-  document.body.classList.toggle('nav-open', !open);
-});
-
-nav?.querySelectorAll('a').forEach((link) => link.addEventListener('click', closeNav));
-window.addEventListener('scroll', setHeaderState, { passive: true });
-setHeaderState();
-
-const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const revealItems = document.querySelectorAll('[data-reveal]');
-
-if (reducedMotion || !('IntersectionObserver' in window)) {
-  revealItems.forEach((item) => item.classList.add('visible'));
-} else {
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('visible');
-        observer.unobserve(entry.target);
-      }
-    });
-  }, { threshold: 0.12 });
-  revealItems.forEach((item) => observer.observe(item));
+const endpoint='https://hood-trust-community-homes.upside-capit-3473.chatgpt.site/api/submit';
+for(const form of document.querySelectorAll('.signup-form')){
+ const kind=form.getAttribute('aria-label').split(' ')[0];
+ if(kind==='contact'){
+  const amount=new URLSearchParams(location.search).get('donation');
+  if(amount==='custom'||/^\d{1,6}$/.test(amount||'')){form.elements.topic.value='Donation or membership';form.elements.message.value='I would like to discuss a gift of '+(amount==='custom'?'a custom amount':'$'+amount)+' to HOOD Land Trust.';}
+ }
+ form.addEventListener('submit',async e=>{
+  e.preventDefault();if(!form.reportValidity())return;
+  const button=form.querySelector('button[type=submit]'),status=form.querySelector('[role=status]'),label=button.textContent;
+  button.disabled=true;button.textContent='Saving…';status.textContent='';status.classList.remove('error');
+  try{
+   const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...Object.fromEntries(new FormData(form)),kind})});
+   const result=await response.json();if(!response.ok)throw new Error(result.error||'Please try again.');
+   form.reset();status.textContent=kind==='newsletter'?'You’re on the list. Thank you for staying connected with HOOD.':kind==='membership'?'Your interest is saved. HOOD can follow up when membership payments open. No payment has been collected.':'Thank you. Your submission has been saved for HOOD to review.';
+  }catch(error){status.textContent=error.message||'We could not save your submission. Please try again shortly.';status.classList.add('error');}
+  finally{button.disabled=false;button.textContent=label;}
+ });
 }
 
-document.querySelectorAll('[data-year]').forEach((item) => {
-  item.textContent = new Date().getFullYear();
-});
-
-const copyButton = document.querySelector('[data-copy-address]');
-const copyStatus = document.querySelector('[data-copy-status]');
-const mailingAddress = 'HOOD Community Land Trust\nPO Box 10502\nBurbank, CA 91510';
-
-copyButton?.addEventListener('click', async () => {
-  try {
-    await navigator.clipboard.writeText(mailingAddress);
-    copyStatus.textContent = 'Mailing address copied.';
-  } catch {
-    copyStatus.textContent = 'Please select and copy the address above.';
-  }
-});
